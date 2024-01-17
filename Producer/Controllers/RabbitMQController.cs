@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CSharpFunctionalExtensions;
+using Microsoft.AspNetCore.Mvc;
 using Producer.RabbitMQ;
 using RabbitMQ;
 
@@ -8,17 +9,21 @@ namespace Producer.Controllers
     [ApiController]
     public class RabbitMQController : ControllerBase
     {
-        private readonly IRabbitMQService _rabbitMQService;
+        private readonly RabbitMQService _rabbitMQService;
 
-        public RabbitMQController(IRabbitMQService rabbitMQService)
+        public RabbitMQController(RabbitMQService rabbitMQService)
         {
             _rabbitMQService = rabbitMQService;
         }
 
-        [Route("[action]/{message}")]
-        [HttpGet]
-        public IActionResult SendMessage(string message)
+        [Route("send")]
+        [HttpPost]
+        public IActionResult SendMessage([FromBody] string message)
         {
+            Result<Message> messageResult = Message.Create(message);
+            if (messageResult.IsFailure)
+                return BadRequest(messageResult.Error);
+
             _rabbitMQService.SendMessage(message);
 
             return Ok("Сообщение отправлено!");

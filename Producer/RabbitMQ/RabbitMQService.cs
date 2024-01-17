@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Producer.RabbitMQ
 {
-    public class RabbitMQService : IRabbitMQService
+    public class RabbitMQService
     {
         public void SendMessage(object obj)
         {
