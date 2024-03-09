@@ -26,9 +26,21 @@ namespace Consumer.RabbitMQ
             {
                 var content = Encoding.UTF8.GetString(e.Body.ToArray());
 
-                Console.WriteLine($"Получено сообщение: {content}");
+                if (content == "Error")
+                {
+                    _channel.BasicNack(e.DeliveryTag, false, false);
+                    return;
+                }
 
-                _channel.BasicAck(e.DeliveryTag, false);
+                string filePath = @"C:\Users\dns\Desktop\MessagesRabbitMQ\Content.txt";
+
+                int countLines = 1;
+                if (File.Exists(filePath))
+                    countLines = File.ReadLines(filePath).Count() + 1;
+
+                File.AppendAllLines(filePath, new List<string>() { $"{content} {countLines}" });
+
+                _channel.BasicNack(e.DeliveryTag, false, false);
             };
 
             _channel.BasicConsume("MyQueue", false, consumer);

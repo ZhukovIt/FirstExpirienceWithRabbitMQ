@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Producer.RabbitMQ;
 using RabbitMQ;
+using System.Text.Json;
 
 namespace Producer.Controllers
 {
@@ -18,15 +19,13 @@ namespace Producer.Controllers
 
         [Route("send")]
         [HttpPost]
-        public IActionResult SendMessage([FromBody] string message)
+        public IActionResult SendMessage([FromBody] object message)
         {
-            Result<Message> messageResult = Message.Create(message);
-            if (messageResult.IsFailure)
-                return BadRequest(messageResult.Error);
+            string content = JsonSerializer.Serialize(message);
 
-            _rabbitMQService.SendMessage(message);
+            string resultMessage = _rabbitMQService.SendMessage(content);
 
-            return Ok("Сообщение отправлено!");
+            return Ok(resultMessage);
         }
     }
 }

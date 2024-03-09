@@ -12,8 +12,10 @@ namespace Producer.RabbitMQ
             SendMessage(messageObj);
         }
 
-        public void SendMessage(string message)
+        public string SendMessage(string message)
         {
+            string resultMessage = "Сообщение отправлено!";
+
             ConnectionFactory factory = new ConnectionFactory()
             {
                 HostName = "localhost"
@@ -22,11 +24,27 @@ namespace Producer.RabbitMQ
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
+                channel.BasicAcks += (sender, ea) =>
+                {
+                    string filePath = @"C:\Users\dns\Desktop\MessagesRabbitMQ\Content.txt";
+
+                    File.AppendAllLines(filePath, new List<string>() { "Сообщение Ack!" });
+                };
+
+                channel.BasicNacks += (sender, ea) =>
+                {
+                    string filePath = @"C:\Users\dns\Desktop\MessagesRabbitMQ\Content.txt";
+
+                    File.AppendAllLines(filePath, new List<string>() { "Сообщение Nack!" });
+                };
+
                 channel.QueueDeclare("MyQueue", false, false, false, null);
 
                 var body = Encoding.UTF8.GetBytes(message);
 
                 channel.BasicPublish("", "MyQueue", null, body);
+
+                return resultMessage;
             }
         }
     }
