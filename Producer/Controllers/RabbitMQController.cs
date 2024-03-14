@@ -1,6 +1,9 @@
 ﻿using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Producer.RabbitMQ;
+using Producer.Utils;
+using ProducerLogic.LogMessages;
+using ProducerLogic.Utils;
 using RabbitMQ;
 using System.Text.Json;
 
@@ -8,24 +11,49 @@ namespace Producer.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class RabbitMQController : ControllerBase
+    public class RabbitMQController : BaseController
     {
-        private readonly RabbitMQService _rabbitMQService;
+        private readonly RPCClient _rpcClient;
+        private readonly LogMessageRepository _logMessageRepository;
 
-        public RabbitMQController(RabbitMQService rabbitMQService)
+        public RabbitMQController(
+            UnitOfWork unitOfWork, 
+            RPCClient rpcClient,
+            LogMessageRepository logMessageRepository)
+            : base(unitOfWork)
         {
-            _rabbitMQService = rabbitMQService;
+            _rpcClient = rpcClient;
+            _logMessageRepository = logMessageRepository;
         }
 
-        [Route("send")]
-        [HttpPost]
-        public IActionResult SendMessage([FromBody] object message)
+        [HttpGet("{id:int}")]
+        public IActionResult GetLogMessage(int id)
+        {
+            LogMessage logMessage = _logMessageRepository.GetById(id);
+            return Ok();
+        }
+
+        [HttpPost("log-message")]
+        public IActionResult CreateLogMessage()
+        {
+            return Ok();
+        }
+
+        [HttpPost("send")]
+        public async Task<IActionResult> SendMessage([FromBody] object message)
         {
             string content = JsonSerializer.Serialize(message);
 
-            string resultMessage = _rabbitMQService.SendMessage(content);
+            string resultMessage = await _rpcClient
+                .SendRPCRequestAsync(content)
+                .ConfigureAwait(false);
 
-            return Ok(resultMessage);
+            RabbitMQEnvelope envelope = JsonSerializer.Deserialize<RabbitMQEnvelope>(resultMessage);
+
+
+
+
+            return Ok(envelope);
         }
     }
 }
