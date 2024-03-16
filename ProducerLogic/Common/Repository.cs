@@ -12,7 +12,7 @@ namespace ProducerLogic.Common
             _unitOfWork = unitOfWork;
         }
 
-        public T GetById(long id)
+        public Maybe<T> GetById(long id)
         {
             return _unitOfWork.Get<T>(id);
         }

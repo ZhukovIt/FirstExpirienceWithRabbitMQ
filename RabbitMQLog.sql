@@ -1,3 +1,9 @@
+USE [master]
+GO
+
+CREATE DATABASE [RabbitMQ]
+GO
+
 USE [RabbitMQ]
 GO
 

@@ -5,55 +5,66 @@ using Producer.Utils;
 using ProducerLogic.LogMessages;
 using ProducerLogic.Utils;
 using RabbitMQ;
+using Producer.Dto;
 using System.Text.Json;
 
 namespace Producer.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
     public class RabbitMQController : BaseController
     {
         private readonly RPCClient _rpcClient;
         private readonly LogMessageRepository _logMessageRepository;
+        private readonly EventTypeRepository _eventTypeRepository;
 
         public RabbitMQController(
             UnitOfWork unitOfWork, 
             RPCClient rpcClient,
-            LogMessageRepository logMessageRepository)
+            LogMessageRepository logMessageRepository,
+            EventTypeRepository eventTypeRepository)
             : base(unitOfWork)
         {
             _rpcClient = rpcClient;
             _logMessageRepository = logMessageRepository;
+            _eventTypeRepository = eventTypeRepository;
         }
 
         [HttpGet("{id:int}")]
         public IActionResult GetLogMessage(int id)
         {
-            LogMessage logMessage = _logMessageRepository.GetById(id);
-            return Ok();
+            Maybe<LogMessage> logMessageOrNothing = _logMessageRepository.GetById(id);
+            if (logMessageOrNothing.HasNoValue)
+                return NotFound($"Сообщения с Id = {id} не существует!");
+
+            var dto = new LogMessageDto()
+            {
+                Id = logMessageOrNothing.Value.Id,
+                ExternalId = logMessageOrNothing.Value.ExternalId.ToString(),
+                Status = logMessageOrNothing.Value.Status.Name,
+                EventType = logMessageOrNothing.Value.EventType.Name,
+                Content = logMessageOrNothing.Value.Content,
+                ErrorMessage = logMessageOrNothing.Value.ErrorMessage.HasValue ? logMessageOrNothing.Value.ErrorMessage.Value : null
+            };
+
+            return Ok(dto);
         }
 
-        [HttpPost("log-message")]
-        public IActionResult CreateLogMessage()
+        [HttpPost("event")]
+        public IActionResult PublishEvent(PublishEventDto item)
         {
-            return Ok();
-        }
+            Maybe<EventType> eventTypeOrNothing = _eventTypeRepository.GetByName(item.EventType);
+            if (eventTypeOrNothing.HasNoValue)
+                return NotFound($"Событие типа {item.EventType} не обрабатывается!");
 
-        [HttpPost("send")]
-        public async Task<IActionResult> SendMessage([FromBody] object message)
-        {
-            string content = JsonSerializer.Serialize(message);
+            Guid externalId = Guid.NewGuid();
+            string content = JsonSerializer.Serialize(item.Content);
 
-            string resultMessage = await _rpcClient
-                .SendRPCRequestAsync(content)
-                .ConfigureAwait(false);
+            LogMessage logMessage = new LogMessage(externalId, LogMessageStatus.InProgress, eventTypeOrNothing.Value, content, Maybe.None);
+            _logMessageRepository.Add(logMessage);
 
-            RabbitMQEnvelope envelope = JsonSerializer.Deserialize<RabbitMQEnvelope>(resultMessage);
+            _rpcClient.SendRPCRequest(externalId, eventTypeOrNothing.Value.Name, content);
 
-
-
-
-            return Ok(envelope);
+            return Ok("Событие опубликовано!");
         }
     }
 }

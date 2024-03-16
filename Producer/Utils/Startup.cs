@@ -24,6 +24,7 @@ namespace Producer.Utils
 
             services.AddSingleton(new SessionFactory(Configuration["ConnectionString"]));
             services.AddScoped<UnitOfWork>();
+            services.AddTransient<EventTypeRepository>();
             services.AddTransient<LogMessageRepository>();
             services.AddSingleton<RPCClient>();
         }

@@ -1,4 +1,5 @@
-﻿using ProducerLogic.Common;
+﻿using CSharpFunctionalExtensions;
+using ProducerLogic.Common;
 using ProducerLogic.Utils;
 
 namespace ProducerLogic.LogMessages
@@ -9,6 +10,15 @@ namespace ProducerLogic.LogMessages
             : base(_unitOfWork)
         {
 
+        }
+
+        public Maybe<LogMessage> GetByGuid(Guid guid)
+        {
+            return _unitOfWork
+                .Query<LogMessage>()
+                .Where(x => x.ExternalId == guid)
+                .FirstOrDefault()
+                .AsMaybe();
         }
     }
 }

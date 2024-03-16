@@ -13,7 +13,12 @@ namespace ProducerLogic.LogMessages
         public static readonly LogMessageStatus Delivered = new(2, "Доставлено");
         public static readonly LogMessageStatus NotDelivered = new(3, "Не доставлено");
 
-        public string Name { get; private set; }
+        public virtual string Name { get; protected set; }
+
+        protected LogMessageStatus()
+        {
+
+        }
 
         private LogMessageStatus(int id, string name)
         {

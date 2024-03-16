@@ -1,5 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
+using System.Text.Json;
+using CSharpFunctionalExtensions;
+using Producer.Dto;
+using ProducerLogic.LogMessages;
+using ProducerLogic.Utils;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -13,7 +18,6 @@ namespace Producer.RabbitMQ
         private readonly IConnection _connection;
         private readonly IModel _channel;
         private readonly string _replyQueueName;
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _callbackMapper = new ();
 
         public RPCClient()
         {
@@ -40,6 +44,18 @@ namespace Producer.RabbitMQ
 
             _channel = _connection.CreateModel();
 
+            _channel.QueueDeclare(
+                queue: QUEUE_NAME,
+                durable: false,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+
+            _channel.BasicQos(
+                prefetchSize: 0,
+                prefetchCount: 1,
+                global: false);
+
             _replyQueueName = _channel.QueueDeclare().QueueName;
             var consumer = new EventingBasicConsumer(_channel);
             consumer.Received += RabbitMQConsumer_Received;
@@ -52,33 +68,28 @@ namespace Producer.RabbitMQ
 
         private void RabbitMQConsumer_Received(object? sender, BasicDeliverEventArgs e)
         {
-            if (!_callbackMapper.TryRemove(e.BasicProperties.CorrelationId, out var taskCompletionSource))
-                return;
-
             byte[] body = e.Body.ToArray();
             string response = Encoding.UTF8.GetString(body);
-            taskCompletionSource.TrySetResult(response);
         }
 
-        public Task<string> SendRPCRequestAsync(string message, CancellationToken cancellationToken = default)
+        public void SendRPCRequest(Guid correlationGuid, string eventTypeName, string content)
         {
-            string correlationId = Guid.NewGuid().ToString();
             IBasicProperties props = _channel.CreateBasicProperties();
-            props.CorrelationId = correlationId;
+            props.CorrelationId = correlationGuid.ToString();
             props.ReplyTo = _replyQueueName;
 
-            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-
-            var taskCompletionSource = new TaskCompletionSource<string>();
-            _callbackMapper.TryAdd(correlationId, taskCompletionSource);
-
+            var dto = new RabbitMQSendMessageDto()
+            {
+                EventName = eventTypeName,
+                Content = content
+            };
+            string dtoContent = JsonSerializer.Serialize(dto);
+            byte[] messageBytes = Encoding.UTF8.GetBytes(dtoContent);
+            
             _channel.BasicPublish(exchange: string.Empty,
                                  routingKey: QUEUE_NAME,
                                  basicProperties: props,
                                  body: messageBytes);
-
-            cancellationToken.Register(() => _callbackMapper.TryRemove(correlationId, out _));
-            return taskCompletionSource.Task;
         }
     }
 }

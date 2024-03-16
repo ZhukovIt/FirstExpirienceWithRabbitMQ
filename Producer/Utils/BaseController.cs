@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Producer.Utils
 {
+    [ApiController]
     public class BaseController : Controller
     {
         private readonly UnitOfWork _unitOfWork;
@@ -27,6 +28,11 @@ namespace Producer.Utils
         protected IActionResult Error(string errorMessage)
         {
             return BadRequest(Envelope.Error(errorMessage));
+        }
+
+        protected IActionResult NotFound(string errorMessage)
+        {
+            return NotFound(Envelope.Error(errorMessage));
         }
     }
 }
