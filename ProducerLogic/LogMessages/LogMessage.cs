@@ -44,5 +44,17 @@ namespace ProducerLogic.LogMessages
             Content = content ?? throw new ArgumentNullException(nameof(content));
             ErrorMessage = errorMessage;
         }
+
+        public virtual void MessageIsDelivered()
+        {
+            Status = LogMessageStatus.Delivered;
+            ErrorMessage = Maybe.None;
+        }
+
+        public virtual void MessageIsNotDelivered(string message)
+        {
+            Status = LogMessageStatus.NotDelivered;
+            ErrorMessage = message;
+        }
     }
 }

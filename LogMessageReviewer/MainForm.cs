@@ -12,9 +12,26 @@ namespace LogMessageReviewer
 {
     public partial class MainForm : Form
     {
-        public MainForm()
+        private readonly UnitOfWork _unitOfWork;
+
+        public MainForm(UnitOfWork unitOfWork)
         {
             InitializeComponent();
+
+            _unitOfWork = unitOfWork;
+            unitOfWork.Load();
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            bsEventType.DataSource = _unitOfWork.CreateEventTypeDataView();
+            bsLogMessageStatus.DataSource = _unitOfWork.CreateLogMessageStatusDataView();
+            bsLogMessage.DataSource = _unitOfWork.CreateLogMessageDataView();
+        }
+
+        private void btnRefresh_Click(object sender, EventArgs e)
+        {
+            _unitOfWork.Load();
         }
     }
 }

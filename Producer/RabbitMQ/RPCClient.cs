@@ -18,9 +18,12 @@ namespace Producer.RabbitMQ
         private readonly IConnection _connection;
         private readonly IModel _channel;
         private readonly string _replyQueueName;
+        private readonly SessionFactory _sessionFactory;
 
-        public RPCClient()
+        public RPCClient(SessionFactory sessionFactory)
         {
+            _sessionFactory = sessionFactory;
+
             ConnectionFactory factory = new ConnectionFactory() { HostName = "localhost" };
             try
             {
@@ -68,8 +71,27 @@ namespace Producer.RabbitMQ
 
         private void RabbitMQConsumer_Received(object? sender, BasicDeliverEventArgs e)
         {
-            byte[] body = e.Body.ToArray();
-            string response = Encoding.UTF8.GetString(body);
+            byte[] responseBytes = e.Body.ToArray();
+            string responseContent = Encoding.UTF8.GetString(responseBytes);
+            var response = JsonSerializer.Deserialize<RabbitMQResponseDto>(responseContent);
+            if (response == null || response.ExternalId == null)
+                throw new InvalidOperationException("Система работает не корректно!");
+
+            var unitOfWork = new UnitOfWork(_sessionFactory);
+            var logMessageRepository = new LogMessageRepository(unitOfWork);
+
+            Maybe<LogMessage> logMessageOrNothing = logMessageRepository.GetByGuid(new Guid(response.ExternalId));
+            if (logMessageOrNothing.HasNoValue)
+                throw new KeyNotFoundException($"Сообщения с ExternalId = {response.ExternalId} не существует!");
+
+            if (response.HandleResult)
+                logMessageOrNothing.Value.MessageIsDelivered();
+            else
+                logMessageOrNothing.Value.MessageIsNotDelivered(response.ErrorMessage);
+
+            logMessageRepository.Add(logMessageOrNothing.Value);
+
+            unitOfWork.Commit();
         }
 
         public void SendRPCRequest(Guid correlationGuid, string eventTypeName, string content)
@@ -80,16 +102,18 @@ namespace Producer.RabbitMQ
 
             var dto = new RabbitMQSendMessageDto()
             {
+                ExternalId = correlationGuid.ToString(),
                 EventName = eventTypeName,
                 Content = content
             };
             string dtoContent = JsonSerializer.Serialize(dto);
             byte[] messageBytes = Encoding.UTF8.GetBytes(dtoContent);
             
-            _channel.BasicPublish(exchange: string.Empty,
-                                 routingKey: QUEUE_NAME,
-                                 basicProperties: props,
-                                 body: messageBytes);
+            _channel.BasicPublish(
+                exchange: string.Empty,
+                routingKey: QUEUE_NAME,
+                basicProperties: props,
+                body: messageBytes);
         }
     }
 }
