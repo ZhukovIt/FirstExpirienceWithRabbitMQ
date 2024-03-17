@@ -12,11 +12,11 @@ namespace ProducerLogic.LogMessages
 
         }
 
-        public Maybe<LogMessage> GetByGuid(Guid guid)
+        public Maybe<LogMessage> GetByGuid(string guid)
         {
             return _unitOfWork
                 .Query<LogMessage>()
-                .Where(x => x.ExternalId == guid)
+                .Where(x => x.ExternalId.ToString() == guid)
                 .FirstOrDefault()
                 .AsMaybe();
         }

@@ -6,6 +6,6 @@
 
         public string EventName { get; set; }
 
-        public object Content { get; set; }
+        public string Content { get; set; }
     }
 }

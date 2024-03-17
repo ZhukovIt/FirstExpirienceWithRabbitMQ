@@ -80,7 +80,7 @@ namespace Producer.RabbitMQ
             var unitOfWork = new UnitOfWork(_sessionFactory);
             var logMessageRepository = new LogMessageRepository(unitOfWork);
 
-            Maybe<LogMessage> logMessageOrNothing = logMessageRepository.GetByGuid(new Guid(response.ExternalId));
+            Maybe<LogMessage> logMessageOrNothing = logMessageRepository.GetByGuid(response.ExternalId);
             if (logMessageOrNothing.HasNoValue)
                 throw new KeyNotFoundException($"Сообщения с ExternalId = {response.ExternalId} не существует!");
 
