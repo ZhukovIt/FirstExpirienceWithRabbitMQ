@@ -70,8 +70,8 @@ GO
 INSERT INTO [dbo].[LogMessageStatus]([Id], [Name])
 VALUES
 	(1, 'В процессе'),
-	(2, 'Доставлено'),
-	(3, 'Не доставлено')
+	(2, 'Успешно'),
+	(3, 'Провалилось')
 GO
 
 INSERT INTO [dbo].[EventType]

@@ -47,13 +47,13 @@ namespace ProducerLogic.LogMessages
 
         public virtual void MessageIsDelivered()
         {
-            Status = LogMessageStatus.Delivered;
+            Status = LogMessageStatus.Success;
             ErrorMessage = Maybe.None;
         }
 
         public virtual void MessageIsNotDelivered(string message)
         {
-            Status = LogMessageStatus.NotDelivered;
+            Status = LogMessageStatus.Failure;
             ErrorMessage = message;
         }
     }

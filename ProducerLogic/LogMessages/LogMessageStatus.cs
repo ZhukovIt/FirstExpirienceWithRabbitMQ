@@ -10,8 +10,8 @@ namespace ProducerLogic.LogMessages
     public class LogMessageStatus : Entity
     {
         public static readonly LogMessageStatus InProgress = new(1, "В процессе");
-        public static readonly LogMessageStatus Delivered = new(2, "Доставлено");
-        public static readonly LogMessageStatus NotDelivered = new(3, "Не доставлено");
+        public static readonly LogMessageStatus Success = new(2, "Успешно");
+        public static readonly LogMessageStatus Failure = new(3, "Провалилось");
 
         public virtual string Name { get; protected set; }
 

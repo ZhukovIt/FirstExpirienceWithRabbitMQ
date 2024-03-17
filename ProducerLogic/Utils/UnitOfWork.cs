@@ -6,7 +6,7 @@ using NHibernate.Linq;
 
 namespace ProducerLogic.Utils
 {
-    public class UnitOfWork
+    public class UnitOfWork : IDisposable
     {
         private readonly ISession _session;
         private readonly ITransaction _transaction;
@@ -29,10 +29,18 @@ namespace ProducerLogic.Utils
             }
             finally
             {
-                _isAlive = false;
-                _transaction.Dispose();
-                _session.Dispose();
+                Dispose();
             }
+        }
+
+        public void Dispose()
+        {
+            if (!_isAlive)
+                return;
+
+            _isAlive = false;
+            _transaction.Dispose();
+            _session.Dispose();
         }
 
         internal T Get<T>(long id)
